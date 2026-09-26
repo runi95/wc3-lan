@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Runs a command that starts Warcraft III (or Battle.net) with wc3-lan's LAN switch loaded:
+#
+#   wc3-lan-run [--offline] <command> [args...]
+#   e.g.  wc3-lan-run lutris lutris:rungame/battlenet
+#         Steam launch options: /path/to/wc3-lan-run %command%
+#         wc3-lan-run --offline umu-run "C:/Program Files (x86)/Warcraft III/_retail_/x86_64/Warcraft III.exe"
+#
+# --offline: the game skips the Battle.net sign-in and goes straight to the main menu (for starting
+# Warcraft III.exe directly, not through Battle.net). No account session, so copies on one machine
+# can't log each other out. Don't combine with the game's -editor flag, which signs in anyway.
+#
+# It builds wine-lan.so if needed, starts the helper if it isn't running, puts the page back into the
+# game folders linux/install.sh found (W3Champions replaces it when it starts), and preloads
+# wine-lan.so for everything the command starts. The library only acts inside Warcraft III.
+set -euo pipefail
+here="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+root="$(dirname "$here")"
+lib="$here/wine-lan.so"
+state="${WC3_LAN_DIR:-$HOME/.cache/wc3-lan}"
+config="${XDG_CONFIG_HOME:-$HOME/.config}/wc3-lan/config"
+mkdir -p "$state"
+if [[ ${1:-} == --offline ]]; then
+  shift
+  : > "$(mktemp "$state/offline-XXXXXX")"  # one start; the helper hands it to the page
+fi
+
+if [[ ! -e "$lib" || "$here/wine-lan.c" -nt "$lib" ]]; then
+  gcc -O2 -Wall -shared -fPIC -fvisibility=hidden -o "$lib" "$here/wine-lan.c"
+fi
+
+if [[ -f "$config" ]]; then
+  # shellcheck source=/dev/null
+  source "$config"
+  for webui in "${WEBUI_DIRS[@]}"; do
+    [[ -d "$webui" ]] && ! cmp -s "$root/page/index.html" "$webui/index.html" \
+      && cp "$root/page/index.html" "$webui/index.html"
+  done
+fi
+
+if ! (exec 3<>/dev/tcp/127.0.0.1/8790) 2>/dev/null; then
+  setsid python3 "$root/helper/wc3-lan-helper.py" >> "$state/helper.log" 2>&1 < /dev/null &
+fi
+
+export LD_PRELOAD="$lib${LD_PRELOAD:+:$LD_PRELOAD}"
+exec "$@"

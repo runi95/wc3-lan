@@ -1,0 +1,3 @@
+linux/wine-lan.so
+tools/*.so
+__pycache__/

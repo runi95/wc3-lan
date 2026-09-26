@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Starts wc3-lan's helper on macOS, unless it already runs. It arms the LAN switch (an lldb
+# breakpoint) when the menus' "Local Area Network" screen asks. WC3_LAN_GAME overrides the game
+# binary it checks (default: /Applications/Warcraft III/...).
+#   --offline: the next game started within 3 minutes skips the Battle.net sign-in
+set -euo pipefail
+root="$(cd "$(dirname "$0")/.." && pwd)"
+if [[ ${1:-} == --offline ]]; then
+  mkdir -p "${WC3_LAN_DIR:-$HOME/.cache/wc3-lan}"
+  : > "$(mktemp "${WC3_LAN_DIR:-$HOME/.cache/wc3-lan}/offline-XXXXXX")"
+  echo "the next game started within 3 minutes starts offline"
+fi
+if nc -z 127.0.0.1 8790 2>/dev/null; then
+  echo "the helper already runs"
+  exit 0
+fi
+mkdir -p "$HOME/Library/Logs"
+nohup python3 "$root/helper/wc3-lan-helper.py" >> "$HOME/Library/Logs/wc3-lan-helper.log" 2>&1 &
+echo "helper started; log: ~/Library/Logs/wc3-lan-helper.log"

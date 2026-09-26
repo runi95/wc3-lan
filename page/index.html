@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8" />
+        <title>Warcraft 3 UI</title>
+        <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, minimal-ui" />
+        <script>
+            window.__DEBUG = new Boolean('').valueOf();
+            (function () {
+                var HELPER = 'http://127.0.0.1:8790';
+                var Native = window.WebSocket;
+                var wrapped = false;
+                var lan = false;
+                var offline = false;
+
+                // One line to the helper's log
+                function log(line) {
+                    try { fetch(HELPER + '/log', {method: 'POST', mode: 'no-cors', body: line}); }
+                    catch (error) { /* no helper */ }
+                }
+
+                function Wrapped(url, protocols) {
+                    var socket = protocols === undefined ? new Native(url) : new Native(url, protocols);
+                    if (String(url).indexOf('/webui-socket/') === -1 || wrapped) { return socket; }
+                    wrapped = true;
+                    var nativeSend = socket.send.bind(socket);
+                    function send(message, payload) {
+                        nativeSend(JSON.stringify({type: 'webui', message: message, payload: payload || {}}));
+                    }
+
+                    // Offline start: when the helper has a ticket (wc3-lan-run --offline), the sign-in the
+                    // login doors would start is replaced by the local provider, a player name and a
+                    // switch of the menus to the main menu. Without an answer in 5 s: sign in as usual.
+                    var doors = {decided: false, offline: false, held: null, name: 'Local Player'};
+                    var lastScreen = null;
+                    function goOffline() {
+                        offline = true;
+                        send('RemoveAuthenticationModal');
+                        send('InitializeLocalNetProvider');
+                        send('SetLocalPlayerName', {playerName: doors.name});
+                        if (lastScreen) {
+                            var menu = JSON.parse(JSON.stringify(lastScreen));
+                            menu.payload.screen = 'MAIN_MENU';
+                            socket.dispatchEvent(new MessageEvent('message', {data: JSON.stringify(menu)}));
+                        }
+                        log('offline: straight to the main menu as ' + doors.name);
+                    }
+                    function decide(answer) {
+                        if (doors.decided) { return; }
+                        doors.decided = true;
+                        doors.offline = !!(answer && answer.offline);
+                        if (doors.offline) { doors.name = answer.name || doors.name; }
+                        if (doors.held) {
+                            if (doors.offline) { goOffline(); } else { nativeSend(doors.held); }
+                        }
+                        doors.held = null;
+                    }
+                    fetch(HELPER + '/offline')
+                        .then(function (response) { return response.json(); })
+                        .then(decide, function () { decide(null); });
+                    setTimeout(function () { decide(null); }, 5000);
+
+                    // The LAN screen asks for the CSDK provider, which Battle.net has disabled. Arm
+                    // the TCPN switch, then send the classic InitializeLocalNetProvider instead.
+                    socket.send = function (data) {
+                        var parsed = null;
+                        try { parsed = JSON.parse(data); } catch (error) { /* not ours to read */ }
+                        if (parsed && parsed.message === 'LoginDoorClose') {
+                            if (offline) { return; }  // stays offline
+                            if (!doors.decided) { doors.held = data; return; }
+                            if (doors.offline) { goOffline(); return; }
+                        }
+                        if (!parsed || parsed.message !== 'InitializeNetProvider'
+                                || (parsed.payload || {}).id !== 'CSDK') {
+                            return nativeSend(data);
+                        }
+                        lan = true;
+                        var local = JSON.stringify({type: 'webui', message: 'InitializeLocalNetProvider', payload: {}});
+                        fetch(HELPER + '/arm')
+                            .then(function (response) { return response.json(); })
+                            .then(function (answer) {
+                                log(answer.ok ? 'armed; letting InitializeLocalNetProvider through'
+                                              : 'not armed: ' + answer.error);
+                                nativeSend(local);
+                            })
+                            .catch(function () {
+                                log('no helper answered; the menus get LOOP');
+                                nativeSend(local);
+                            });
+                    };
+
+                    // Incoming: unhide the LAN button; offline, keep the game's leftover sign-in
+                    // attempt (login queue, login window) off the screen; once LAN or offline, drop
+                    // the LoggedOut a second game signing in with the same account causes.
+                    function filtered(event) {
+                        var parsed;
+                        try { parsed = JSON.parse(event.data); } catch (error) { return event; }
+                        var type = parsed.messageType;
+                        var payload = parsed.payload || {};
+                        if (type === 'SetGlueScreen') { lastScreen = parsed; }
+                        if (type === 'FeatureFlags' && payload.data) {
+                            payload.data.enableLanMode = true;
+                            return new MessageEvent('message', {data: JSON.stringify(parsed)});
+                        }
+                        if (offline && type === 'ShowModal' && (payload.data || {}).title === 'Login Queue') {
+                            return null;
+                        }
+                        if (offline && type === 'SetOverlayScreen' && payload.screen === 'AUTHENTICATION_OVERLAY') {
+                            send('RemoveAuthenticationModal');  // the login is the game's own browser window
+                            payload.screen = 'NO_OVERLAY';
+                            return new MessageEvent('message', {data: JSON.stringify(parsed)});
+                        }
+                        if (type === 'LoggedOut' && (lan || offline)) {
+                            log('dropped LoggedOut (another game signed in with this account)');
+                            return null;
+                        }
+                        return event;
+                    }
+
+                    // The menus may listen either way; both get the filtered messages
+                    var nativeAdd = socket.addEventListener.bind(socket);
+                    socket.addEventListener = function (type, listener, options) {
+                        if (type !== 'message' || typeof listener !== 'function') {
+                            return nativeAdd(type, listener, options);
+                        }
+                        return nativeAdd(type, function (event) {
+                            var passed = filtered(event);
+                            if (passed) { return listener.call(this, passed); }
+                        }, options);
+                    };
+                    var onmessage = null;
+                    Object.defineProperty(socket, 'onmessage', {
+                        get: function () { return onmessage; },
+                        set: function (handler) { onmessage = handler; }
+                    });
+                    nativeAdd('message', function (event) {
+                        var passed = onmessage && filtered(event);
+                        if (passed) { onmessage.call(socket, passed); }
+                    });
+                    return socket;
+                }
+                Wrapped.prototype = Native.prototype;
+                Wrapped.CONNECTING = 0; Wrapped.OPEN = 1; Wrapped.CLOSING = 2; Wrapped.CLOSED = 3;
+                window.WebSocket = Wrapped;
+            })();
+        </script>
+    </head>
+    <body>
+        <div id="root"></div>
+        <div id="portal"></div>
+        <script src="GlueManager.js"></script>
+    </body>
+</html>
