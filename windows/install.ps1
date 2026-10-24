@@ -31,8 +31,16 @@ New-Item -ItemType Directory -Force -Path $webui | Out-Null
 if ((Test-Path $page) -and -not (Select-String -Quiet -Path $page -Pattern "wc3-lan:") -and -not (Test-Path $kept)) {
     Copy-Item $page $kept
 }
-Copy-Item (Join-Path $root "page\index.html") $page
+$gameExecutable = Join-Path $Game '_retail_\x86_64\Warcraft III.exe'
+$buildVersion = (Get-Item -LiteralPath $gameExecutable).VersionInfo.FileVersion
+$sourcePage = 'page\index.html'
+if ($buildVersion -match '3\.0\.1\.24371') { $sourcePage = 'page\windows-loop.html' }
+Copy-Item (Join-Path $root $sourcePage) $page
 $settings = "HKCU:\Software\Blizzard Entertainment\Warcraft III"
 if (-not (Test-Path $settings)) { New-Item -Path $settings | Out-Null }  # never -Force: it would replace the key
 Set-ItemProperty -Path $settings -Name "Allow Local Files" -Type DWord -Value 1
-"Installed into $webui. The Local Area Network button will show. To host or find LAN games, run windows\lan-switch.ps1 with the game on the main menu, then click Local Area Network."
+if ($buildVersion -match '3\.0\.1\.24371') {
+    "Installed into $webui. Start the game through Battle.net, then use windows\loop-lan.ps1. See docs\windows-24371.md."
+} else {
+    "Installed into $webui. Read the supported-build requirements before using windows\lan-switch.ps1."
+}

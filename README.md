@@ -1,5 +1,7 @@
 # wc3-lan
 
+**Windows 3.0.1.24371:** an experimental, build-pinned LOOP adapter is available. It uses an external W3GS host and a native callback without attaching a debugger. See [setup and validation limits](docs/windows-24371.md).
+
 Disclaimer: This repository has been written by an AI agent. Parts of the setup and idea comes from W3Champions and [wc3-slop-lan](https://github.com/Promises/wc3-slop-lan) with additional help from sotzaii_shuen to get offline mode working.
 
 Brings back **LAN games** in Warcraft III: Reforged, through the game's own (hidden) **Local
@@ -8,7 +10,7 @@ and join; two copies of the game on one machine can play each other too. Optiona
 starts **offline**, straight to the main menu without a Battle.net sign-in.
 
 Not affiliated with Blizzard. It changes the game's menu page and, for a moment, one value in the
-running game (in its code on Linux, in a CPU register through a debugger on macOS and Windows); see
+running game (in its code on Linux, in a CPU register through a debugger on macOS and legacy Windows); see
 [Risks](#risks).
 
 ## Status
@@ -17,10 +19,10 @@ running game (in its code on Linux, in a CPU register through a debugger on macO
 | ------------------------- | ----------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Linux** (Wine / Proton) | yes         | yes (`linux/wine-lan.c`)                                                    | the same page, switch and helper on one setup (Arch, GE-Proton 11-7 through umu): host, join from a second copy, offline start, full matches. This repository's `install.sh`/`wc3-lan-run` only on a test copy so far; Lutris, Bottles, Steam, Heroic: not yet |
 | **macOS**                 | yes         | yes (one-shot `lldb` breakpoint)                                            | **no**: built from the method of the macOS test harness it came from, which was verified there, but not tried as a whole                                                                                                                                       |
-| **Windows**               | yes         | by hand: `windows/lan-switch.ps1` (a debugger script), once per LAN session | **no**: the script was written without a Windows PC and has never been run                                                                                                                                                                                     |
+| **Windows** | yes | 24371: `windows/loop-lan.ps1` + external host; 24268: legacy debugger switch | 24371: local join/map start/sustained match/clean exit; two local clients entered one map. Relay checksum differences remain under investigation; see the guide. |
 
-Only **Warcraft III 3.0.0.24268** is supported: the switch checks the build and refuses any other.
-After a game patch it needs new values; `tools/` has what was used to find them.
+The original provider switch targets **3.0.0.24268**. The separate Windows **3.0.1.24371** adapter requires matching EXE and loader fingerprints.
+Game updates may change provider behavior as well as addresses; the 24371 guide documents the separate route.
 
 ## Why it's needed
 
@@ -29,7 +31,7 @@ Reforged still has LAN, but it's switched off three times over:
 1. Battle.net tells the menus `enableLanMode: false`, so the Local Area Network button is hidden.
 2. That button's screen asks for a newer network provider ("CSDK") that Battle.net has turned off,
    so it would list online games.
-3. The classic LAN provider ("TCPN") still works, but no menu selects it. The only way in is to
+3. On 24268, the classic LAN provider ("TCPN") still works, but no menu selects it. The only way in is to
    change which provider the game's `InitializeLocalNetProvider` handler selects, `'LOOP'` →
    `'TCPN'`, for one call. It must go straight back: the game checks its own code and quits about
    35 seconds into a match if the change is still there.
@@ -72,7 +74,11 @@ macos/wc3-lan-start         # the helper; start it before the game
 
 If `lldb` can't attach to the game: `sudo DevToolsSecurity -enable`.
 
-### Windows (untested)
+### Windows
+
+For **3.0.1.24371**, use [the LOOP adapter guide](docs/windows-24371.md). It requires an external game host; the game's native Create Game flow remains single player.
+
+#### Legacy 24268 (untested)
 
 Install the menu page and `"Allow Local Files"`:
 
@@ -91,6 +97,8 @@ When it says **Ready**, click Local Area Network. It attaches to the game as a d
 CPU register for that one call (no game code is changed) and detaches.
 
 ## Use
+
+Windows 24371 uses [the host/join scripts](docs/windows-24371.md). The steps below describe the original provider switch.
 
 1. Start the game (on Linux through `wc3-lan-run`; on Windows, run `windows/lan-switch.ps1` once
    it's on the main menu).
@@ -147,7 +155,7 @@ On Windows, `lan-switch.ps1` prints what it did.
 
 wc3-lan replaces the game's menu page and, only while the LAN screen sets up, changes one value in
 the running game: on Linux in its code in memory, on macOS and Windows in a CPU register while a
-debugger holds the game. W3Champions does comparable things to its players' games. Still, it's not
+debugger holds the game. The Windows 24371 adapter temporarily replaces data slots and changes the session provider when joining. W3Champions does comparable things to its players' games. Still, it's not
 something Blizzard offers, and you use it at your own risk.
 
 ## Layout

@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "adapter_id": "wc3-lan-windows-3.0.1.24371-local-r1",
+  "adapter_version": 1,
+  "game_version": "3.0.1.24371",
+  "fingerprint": [
+    34404,
+    1792442231,
+    236904448
+  ],
+  "executable_sha256": "eb39ab298ae1d84d307aba4d400f2a7dbda2900a46964bb28aeba592f45fa97a",
+  "bridge_protocol": 2,
+  "validation": {
+    "debugger_backend_enabled": false,
+    "native_tcpn_factory": false,
+    "scope": "Local single-client stability and two-client room/map entry verified. User-observed gameplay appeared synchronized, but relay checksum disagreements remain unresolved. Cross-machine unverified."
+  },
+  "loader_sha256": "ef88b6554036661f5974986b95912b08c8a7042795177f539a67cc4e710d23d7",
+  "native_loop": {
+    "bridge_abi": 2,
+    "vtable_rva": 42443320,
+    "listing_slot_rva": 42443352,
+    "listing_original_rva": 21606000,
+    "join_slot_rva": 42443440,
+    "join_original_rva": 21605248,
+    "get_context_rva": 1672496,
+    "add_listing_rva": 21593984,
+    "connect_rva": 32512896,
+    "owner_data_offset": 32,
+    "current_session_offset": 184,
+    "mode_offset": 51344,
+    "provider_tag_a_offset": 48,
+    "provider_tag_b_offset": 52,
+    "checks": [
+      {
+        "rva": 21606000,
+        "accepted_hex": [
+          "c20000",
+          "a6f87d"
+        ]
+      },
+      {
+        "rva": 21605248,
+        "accepted_hex": [
+          "48895c241048896c2418565741564883ec30488bc2488bd9488bc8488d542450498be94d8bf0e83567a600488d8bf804000033ffe8e7fba700488b9310050000f6c20175078bcf4885d27505b90100000085c9488bc7480f44c20fb754245090a80175184885c07413488b4808663950107405488bc1ebe8488b7818488d8bf8040000e8d8fba7008b4424784c8bc54c8b4c2470488bd7498bce89442420e8bd65a600488b5c2458488b6c24604883c430415e5f5ec3",
+          "7e3eb991d3c6e8752917080076b05eecc277ef367dea80980d22f05c56d5a6acd288963ff88ca5be7450db491230b6f8d0a1f8fa96403f74c67a7390b44a6dfc41e11123a488650688550719ad3a4b06aa241e3899dc775acf242680f99c090bc3b5d6d8a2f81497dd0198e42d58ae2ace76223f2da1b7d7539e48b6739b2be5af2fb7e3cb922ae02da59e369bbdea78becd99d606a16497c753dbc003cdd8cf2990f309061fd801f60ff9a489ab4421f81c8cc44595"
+        ]
+      },
+      {
+        "rva": 21593984,
+        "accepted_hex": [
+          "48895c2418488954241055565741544155415641574883ec30418bd94d8be0488bf14533ff8b4130398424980000000f85bf0400008b4134398424a00000000f85af040000488bac24a800000083bd70",
+          "25d6702b50f557d9d063fe402a24c1081451c8f50e1ae3369b64c74cbe6522f3f5c207dddd690794914fe7c4224922a8b17a29baf452a60a7ef26fe81ec885332a417075be87226ce68af81ac8b8644c"
+        ]
+      },
+      {
+        "rva": 32512896,
+        "accepted_hex": [
+          "4883ec48448bd1488b0d3200f90b4885c974268b44247889442430488b44247048894424284c894c24204d8bc8440fb7c2418bd2e8471f00004883c448c3",
+          "a91baad07022d5ca6740a189d0136d32e34f03b22213ee1c8e6892a1e73f5f243c4d37228d0ae03005cc9c7ab6cfae8f3c5b15c800a8894d6378dc1e0d3f"
+        ]
+      },
+      {
+        "rva": 1672496,
+        "accepted_hex": [
+          "40534883ec204863d90f1f800000000081fc002e0000770383ecf074087506e800000000c350ebffc058f98af6760a9090c7c0cb1dcb1b81c690763c93e8c9e300000f31e8124c010081e9d7e6e32980ea3781c187f7b7dbe8d82f0100c7c0c3b9e4160f83530a000080c3525ae8a13f0000c197fdbbb5b98b0d8abee502e8fdebd501488bc866660f1f8400000000007a4086c07b17909053c6c2a3590f3181ed269526f16ad75d80efee0f8d7b2b0000576a50c6c61680eb9d80e87680c2a70f8e7a1601005451c6c342c7c398a9cd59e87aee0100c1a8ff2a4885c9740b488b44d9184883c4205bc333c04883c4205bc3",
+          "97a6d4151c764cad0049190136127f7b0153a0a9546b4616838052a108688e20cc30496f36e03d1794084e9a315191b91a6fd426a4e44729bfebfa48b0dc38f77483e70a6fe5c1e032c22fbff9db59d236c21d4d276ad6f6b4baaa819710085a5cae7124c5159b4fbc257919ecf8763f6bd2067f32acb5e5b4df70bc7c7f35617870809fa2222fdd2eba28612a458633e27c5c11d7029fbecd4daf9effd3aa3f3b9c5e92d81cbf68a6ad3a322d13706f3df9d30a7c48d5bb636c64e8e42f85f8bab8f4d872b9156ac613c8f03c8d6dc49e27d996108060874f95496b83b5a2158b6ff29995aab6067dbbadfa41f99d4500db"
+        ]
+      },
+      {
+        "rva": 32469424,
+        "accepted_hex": [
+          "48ff2539463f00",
+          "7179de3378f437"
+        ]
+      },
+      {
+        "rva": 22699024,
+        "accepted_hex": [
+          "4883ec28b90d000000e81229bffe488b4020488b88b80000004885c9740b8b8190c800004883c428c3b8454e4f4e4883c428c3",
+          "daab4bc54b4c04ca05040126d6a87d0401992dac77fd557ef8bddadd793805a95a53a42aee5bee5b9e495b232cdf20889b7b23"
+        ]
+      },
+      {
+        "rva": 22703584,
+        "accepted_hex": [
+          "4883ec2881fc00460000770383ec2d74087506e800000000c350ebffc05885e9711d909080e8e0c7c7c8bf680454e8e0ee0100e8dd40010080ed7a6ae30f8d71040100c7c586c971028e87b90d000000e8fb16bffe488b4020488b88b80000004885c9741b8b8190c800003d504f4f4c740e3d454e4f4e7407b0014883c428c332c04883c428c3",
+          "5864e5f796022d4bf70205f0f79799e52be0b0aa7ca350bdfcaee5d65f0c86fb9b77d0e5feb76704febfcb954124bd68da9672df81f41418e9282000bb90ee5e7f5792a548db37110a157639c059584e90149e9bfe67701c37a54aeced46681befeaf7323a8f077cb5cde6ac5ef5f2fa976797a4adcea35431d1cbc1bef3c213712f730a0be745"
+        ]
+      },
+      {
+        "rva": 22732704,
+        "accepted_hex": [
+          "4883ec288b8190c800003d504f4f4c742e3d454e4f4e7427",
+          "7cf7d6dfbf67980b1106d7a9277e132b724a9ddd0edce1a4"
+        ]
+      },
+      {
+        "rva": 22702590,
+        "accepted_hex": [
+          "4489be90c80000e88699edff0fb6c0898668c80000e8a899edff89866cc80000",
+          "91f8c3e963ac0adb4e4727c2315de1672b0a8d33eee8284e78d292a0cc13aa47"
+        ]
+      }
+    ],
+    "validation": "Query/list/join, TCPN readback, map load, sustained local match and clean exit verified. Two local clients joined and sent actions; relay checksum discrepancies require investigation.",
+    "context_slot": 13
+  }
+}

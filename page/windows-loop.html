@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Warcraft 3 UI</title>
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0" />
+    <script>
+    window.__DEBUG = false;
+    // wc3-lan: Windows 24371. The CLI performs the validated native operation.
+    (function () {
+        var Native = window.WebSocket;
+        var wrapped = false;
+        var lan = false;
+        function explain() {
+            var box = document.getElementById('wc3-lan-help');
+            if (box) { box.style.display = 'block'; return; }
+            box = document.createElement('div');
+            box.id = 'wc3-lan-help';
+            box.setAttribute('role', 'alert');
+            box.style.cssText = 'position:fixed;z-index:2147483647;top:12%;left:10%;right:10%;padding:24px;background:#172116;color:#ffe3a0;border:2px solid #b8984d;border-radius:8px;font:18px/1.7 sans-serif;white-space:pre-wrap;box-shadow:0 0 0 2000px rgba(0,0,0,.65);';
+            box.textContent = 'LAN on build 24371 needs an external game host.\nJoin from PowerShell:\n.\\windows\\loop-lan.ps1 -Action join -Name ROOM_NAME\n\nHost: .\\windows\\lan-host.ps1\nSetup: docs/windows-24371.md\n';
+            var button = document.createElement('button');
+            button.textContent = 'OK';
+            button.style.cssText = 'display:block;margin-top:14px;padding:8px 24px;color:#ffe3a0;background:#29452d;border:1px solid #b8984d;font:18px sans-serif;cursor:pointer;';
+            button.onclick = function () { box.style.display = 'none'; };
+            box.appendChild(button);
+            document.body.appendChild(box);
+        }
+        function Wrapped(url, protocols) {
+            var socket = protocols === undefined ? new Native(url) : new Native(url, protocols);
+            if (wrapped || String(url).indexOf('/webui-socket/') < 0) { return socket; }
+            wrapped = true;
+            var send = socket.send.bind(socket), add = socket.addEventListener.bind(socket);
+            socket.send = function (data) {
+                var value;
+                try { value = JSON.parse(data); } catch (error) { return send(data); }
+                if (value.message === 'InitializeNetProvider' && (value.payload || {}).id === 'CSDK') {
+                    lan = true;
+                    explain();
+                    return; // A missing adapter must never silently initialize single-player LOOP.
+                }
+                if (lan && (value.message === 'CreateLobby' || value.message === 'JoinGame' || value.message === 'JoinGameByGameName')) {
+                    explain();
+                    return;
+                }
+                return send(data);
+            };
+            function filtered(event) {
+                var value;
+                try { value = JSON.parse(event.data); } catch (error) { return event; }
+                if (value.messageType === 'FeatureFlags' && (value.payload || {}).data) {
+                    value.payload.data.enableLanMode = true;
+                    return new MessageEvent('message', {data: JSON.stringify(value)});
+                }
+                if (value.messageType === 'SetGlueScreen' && (value.payload || {}).screen === 'MAIN_MENU') { lan = false; }
+                return event;
+            }
+            socket.addEventListener = function (type, listener, options) {
+                if (type !== 'message' || typeof listener !== 'function') { return add(type, listener, options); }
+                return add(type, function (event) { listener.call(this, filtered(event)); }, options);
+            };
+            var handler = null;
+            Object.defineProperty(socket, 'onmessage', {get: function () { return handler; }, set: function (value) { handler = value; }});
+            add('message', function (event) { if (handler) { handler.call(socket, filtered(event)); } });
+            return socket;
+        }
+        Wrapped.prototype = Native.prototype;
+        Wrapped.CONNECTING = 0; Wrapped.OPEN = 1; Wrapped.CLOSING = 2; Wrapped.CLOSED = 3;
+        window.WebSocket = Wrapped;
+    })();
+    </script>
+</head>
+<body><div id="root"></div><div id="portal"></div><script src="GlueManager.js"></script></body>
+</html>

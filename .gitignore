@@ -1,3 +1,5 @@
 linux/wine-lan.so
 tools/*.so
 __pycache__/
+investigation/
+.pytest_cache/

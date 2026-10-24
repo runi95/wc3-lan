@@ -237,7 +237,7 @@ $game = $game[0]
 $version = (Get-Item $game.Path).VersionInfo.FileVersion
 Write-Host "Warcraft III is running (process $($game.Id), version $version)."
 if ($version -notmatch "24268") {
-    Write-Warning "This was worked out on 3.0.0.24268; on another version the search may find nothing or the wrong place."
+    throw "The debugger switch supports only build 24268. Build 24371 uses windows\loop-lan.ps1; see docs\windows-24371.md. No debugger was attached."
 }
 
 if ($Address) {
