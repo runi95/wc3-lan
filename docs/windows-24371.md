@@ -37,9 +37,12 @@ Uninstall through `windows\install.ps1 -Uninstall` after closing the game.
 
 ## Validation
 
-Validated on a user-provided **3.0.1.24371 学习版 (offline installation)**, including
-**two simultaneous clients on one PC**: hosting, discovery, join/start, gameplay,
-re-entry and cleanup. **Separate physical PCs have not been tested.**
+Validated on the user-provided **3.0.1.24371 installation**, called 学习版 by the
+user, started through its custom `Warcraft III Launcher.exe` with the helper's
+`-Offline` option. **Two simultaneous clients on one PC** passed hosting,
+discovery, join/start, gameplay, re-entry and cleanup. This installation shares
+the registered game directory; clean official and separate offline installations
+were not tested independently. **Separate physical PCs have not been tested.**
 
 Automated hosting used the original CreateLobby request; automated room-name
 text entry was not verified. The cause of other installations' reported
