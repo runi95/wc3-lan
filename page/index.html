@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- wc3-lan: menu -->
 <html>
     <head>
         <meta charset="utf-8" />
@@ -11,11 +12,12 @@
                 var Native = window.WebSocket;
                 var wrapped = false;
                 var lan = false;
+                var activating = false;
                 var offline = false;
 
                 // One line to the helper's log
                 function log(line) {
-                    try { fetch(HELPER + '/log', {method: 'POST', mode: 'no-cors', body: line}); }
+                    try { fetch(HELPER + '/log', {method: 'POST', mode: 'no-cors', body: line}).catch(function () {}); }
                     catch (error) { /* no helper */ }
                 }
 
@@ -31,9 +33,10 @@
                     // Offline start: when the helper has a ticket (wc3-lan-run --offline), the sign-in the
                     // login doors would start is replaced by the local provider, a player name and a
                     // switch of the menus to the main menu. Without an answer in 5 s: sign in as usual.
-                    var doors = {decided: false, offline: false, held: null, name: 'Local Player'};
+                    var doors = {decided: false, offline: false, held: null, name: 'Local Player', native: false};
                     var lastScreen = null;
                     function goOffline() {
+                        if (offline) { return; }
                         offline = true;
                         send('RemoveAuthenticationModal');
                         send('InitializeLocalNetProvider');
@@ -48,20 +51,24 @@
                     function decide(answer) {
                         if (doors.decided) { return; }
                         doors.decided = true;
+                        doors.native = !!(answer && answer.native);
                         doors.offline = !!(answer && answer.offline);
                         if (doors.offline) { doors.name = answer.name || doors.name; }
                         if (doors.held) {
                             if (doors.offline) { goOffline(); } else { nativeSend(doors.held); }
                         }
                         doors.held = null;
+                        if (!offline && doors.offline && lastScreen && lastScreen.payload.screen === 'LOGIN_DOORS') {
+                            setTimeout(goOffline, 0);
+                        }
                     }
                     fetch(HELPER + '/offline')
                         .then(function (response) { return response.json(); })
                         .then(decide, function () { decide(null); });
                     setTimeout(function () { decide(null); }, 5000);
 
-                    // The LAN screen asks for the CSDK provider, which Battle.net has disabled. Arm
-                    // the TCPN switch, then send the classic InitializeLocalNetProvider instead.
+                    // Prepare the platform's LAN switch/adapter, then initialize the local provider
+                    // instead of the CSDK provider requested by the LAN screen.
                     socket.send = function (data) {
                         var parsed = null;
                         try { parsed = JSON.parse(data); } catch (error) { /* not ours to read */ }
@@ -70,15 +77,26 @@
                             if (!doors.decided) { doors.held = data; return; }
                             if (doors.offline) { goOffline(); return; }
                         }
+                        if (doors.native && parsed && (parsed.message === 'InitializeLocalNetProvider'
+                                || (parsed.message === 'InitializeNetProvider' && (parsed.payload || {}).id !== 'CSDK'))) {
+                            lan = false;
+                            fetch(HELPER + '/arm?lan=0').then(function (response) { return response.json(); })
+                                .then(function (answer) { if (answer.ok) { nativeSend(data); } else { log(answer.error); } })
+                                .catch(function (error) { log(String(error)); });
+                            return;
+                        }
                         if (!parsed || parsed.message !== 'InitializeNetProvider'
                                 || (parsed.payload || {}).id !== 'CSDK') {
                             return nativeSend(data);
                         }
                         lan = true;
+                        activating = false;
                         var local = JSON.stringify({type: 'webui', message: 'InitializeLocalNetProvider', payload: {}});
                         fetch(HELPER + '/arm')
                             .then(function (response) { return response.json(); })
                             .then(function (answer) {
+                                doors.native = !!answer.native;
+                                if (answer.native && !answer.ok) { log(answer.error); return; }
                                 log(answer.ok ? 'armed; letting InitializeLocalNetProvider through'
                                               : 'not armed: ' + answer.error);
                                 nativeSend(local);
@@ -97,10 +115,26 @@
                         try { parsed = JSON.parse(event.data); } catch (error) { return event; }
                         var type = parsed.messageType;
                         var payload = parsed.payload || {};
-                        if (type === 'SetGlueScreen') { lastScreen = parsed; }
+                        if (doors.native && lan && !activating && type === 'OnNetProviderChanged'
+                                && payload.providerId === 'LOOP') {
+                            activating = true;
+                            fetch(HELPER + '/activate').then(function (response) { return response.json(); })
+                                .then(function (answer) { if (!answer.ok) { log(answer.error); } })
+                                .catch(function (error) { log(String(error)); });
+                        }
+                        if (type === 'SetGlueScreen') {
+                            lastScreen = parsed;
+                            if (!offline && doors.decided && doors.offline && payload.screen === 'LOGIN_DOORS') {
+                                setTimeout(goOffline, 0);
+                            }
+                        }
                         if (type === 'FeatureFlags' && payload.data) {
                             payload.data.enableLanMode = true;
                             return new MessageEvent('message', {data: JSON.stringify(parsed)});
+                        }
+                        if (offline && type === 'ShowModal' && ['Login', 'Logout'].indexOf((payload.data || {}).callbackEvent) >= 0) {
+                            log('offline: suppressed authentication modal');
+                            return null;
                         }
                         if (offline && type === 'ShowModal' && (payload.data || {}).title === 'Login Queue') {
                             return null;

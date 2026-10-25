@@ -1,0 +1,4 @@
+pefile==2024.8.26
+psutil==7.0.0
+pymem==1.14.0
+websockets==15.0.1

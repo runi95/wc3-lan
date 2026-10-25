@@ -8,8 +8,8 @@ and join; two copies of the game on one machine can play each other too. Optiona
 starts **offline**, straight to the main menu without a Battle.net sign-in.
 
 Not affiliated with Blizzard. It changes the game's menu page and, for a moment, one value in the
-running game (in its code on Linux, in a CPU register through a debugger on macOS and Windows); see
-[Risks](#risks).
+running game (in its code on Linux, in a CPU register through a debugger on macOS and Windows 24268).
+Windows 24371 uses native callbacks and data-interface pointers; see [Risks](#risks).
 
 ## Status
 
@@ -17,14 +17,15 @@ running game (in its code on Linux, in a CPU register through a debugger on macO
 | ------------------------- | ----------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Linux** (Wine / Proton) | yes         | yes (`linux/wine-lan.c`)                                                    | the same page, switch and helper on one setup (Arch, GE-Proton 11-7 through umu): host, join from a second copy, offline start, full matches. This repository's `install.sh`/`wc3-lan-run` only on a test copy so far; Lutris, Bottles, Steam, Heroic: not yet |
 | **macOS**                 | yes         | yes (one-shot `lldb` breakpoint)                                            | **no**: built from the method of the macOS test harness it came from, which was verified there, but not tried as a whole                                                                                                                                       |
-| **Windows**               | yes         | by hand: `windows/lan-switch.ps1` (a debugger script), once per LAN session | **no**: the script was written without a Windows PC and has never been run                                                                                                                                                                                     |
+| **Windows (24268)**       | yes         | by hand: `windows/lan-switch.ps1` (a debugger script), once per LAN session | **no**: the script was written without a Windows PC and has never been run                                                                                                                                                                                     |
+| **Windows (24371)**       | yes         | `windows/lan-switch.ps1` starts a resident menu helper and in-game adapter | offline installation and two clients on one PC; separate-PC tests pending |
 
-Only **Warcraft III 3.0.0.24268** is supported: the switch checks the build and refuses any other.
+The original switch supports **3.0.0.24268**. Windows **3.0.1.24371** uses an adapter with a resident helper.
 After a game patch it needs new values; `tools/` has what was used to find them.
 
 ## Why it's needed
 
-Reforged still has LAN, but it's switched off three times over:
+In **3.0.0.24268**, Reforged still has LAN, but it's switched off three times over:
 
 1. Battle.net tells the menus `enableLanMode: false`, so the Local Area Network button is hidden.
 2. That button's screen asks for a newer network provider ("CSDK") that Battle.net has turned off,
@@ -72,7 +73,10 @@ macos/wc3-lan-start         # the helper; start it before the game
 
 If `lldb` can't attach to the game: `sudo DevToolsSecurity -enable`.
 
-### Windows (untested)
+### Windows
+
+For **3.0.1.24371**, use [Windows 24371](docs/windows-24371.md).
+The following instructions describe the older 24268 debugger switch.
 
 Install the menu page and `"Allow Local Files"`:
 
@@ -108,8 +112,8 @@ linux/wc3-lan-run --offline umu-run "C:/Program Files (x86)/Warcraft III/_retail
 macos/wc3-lan-start --offline      # then start the game within 3 minutes (untested)
 ```
 
-Don't add the game's `-editor` flag: it signs in with a saved token anyway. Not available on Windows
-(it needs the helper, which Windows doesn't run).
+Don't add the game's `-editor` flag: it signs in with a saved token anyway. On Windows 24371, use
+`windows\lan-switch.ps1 -Native24371 -Offline` as described in the Windows guide.
 
 ### Two copies on one machine
 
@@ -146,8 +150,10 @@ On Windows, `lan-switch.ps1` prints what it did.
 ## Risks
 
 wc3-lan replaces the game's menu page and, only while the LAN screen sets up, changes one value in
-the running game: on Linux in its code in memory, on macOS and Windows in a CPU register while a
-debugger holds the game. W3Champions does comparable things to its players' games. Still, it's not
+the running game: on Linux in its code in memory, on macOS and Windows 24268 in a CPU register while a
+debugger holds the game. Windows 24371 keeps native adapter callbacks in the game and a local menu
+helper running; it replaces checked data-interface pointers without patching game code.
+W3Champions does comparable things to its players' games. Still, it's not
 something Blizzard offers, and you use it at your own risk.
 
 ## Layout
@@ -160,7 +166,7 @@ linux/wc3-lan-run          starts a launcher command with the switch and the hel
 linux/install.sh           finds the game, installs the page, sets the registry value
 macos/                     installer and helper start for macOS
 windows/install.ps1        installs the page on Windows
-windows/lan-switch.ps1     the Windows LAN switch: a debugger script, run by hand
+windows/lan-switch.ps1     Windows entry: 24268 debugger switch or 24371 adapter/helper
 tools/                     for a new game build: dump the decrypted code, find the LAN site
 docs/                      how it works, Linux launchers
 ```

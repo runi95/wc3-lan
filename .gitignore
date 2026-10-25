@@ -1,3 +1,7 @@
 linux/wine-lan.so
 tools/*.so
 __pycache__/
+
+windows/native24371/*.dll
+windows/native24371/*.obj
+windows/native24371/*.lib

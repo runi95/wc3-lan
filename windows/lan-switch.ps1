@@ -1,4 +1,4 @@
-# wc3-lan's LAN switch for Windows (untested on Windows; read it before you run it).
+# 24371: native adapter (docs/windows-24371.md). The legacy 24268 switch is described below.
 #
 #   1. finds Warcraft III and, in its executable memory, the routine that sets up local play:
 #        48 83 EC 58  E8 ?? ?? ?? ??  B9 50 4F 4F 4C  E8 ...
@@ -16,10 +16,33 @@
 #   powershell -ExecutionPolicy Bypass -File lan-switch.ps1 -Address 0x7FF6... (skip the search)
 param(
     [string]$Address = "",
-    [int]$TimeoutSeconds = 120
+    [int]$TimeoutSeconds = 120,
+    [switch]$Offline,
+    [switch]$Native24371
 )
 $ErrorActionPreference = "Stop"
 if (-not [Environment]::Is64BitProcess) { throw "Run this from 64-bit PowerShell (the game is 64-bit)." }
+
+# 24371 uses the game's native sockets through a data-interface adapter.
+$running = @(Get-Process -Name "Warcraft III" -ErrorAction SilentlyContinue)
+$is24371 = @($running | Where-Object { (Get-Item $_.Path).VersionInfo.FileVersion -match '24371' }).Count -gt 0
+if ($Native24371 -or $Offline -or $is24371) {
+    if ($Address) { throw '-Address is for the 24268 debugger switch.' }
+    $native = Join-Path $PSScriptRoot 'native24371'
+    $dll = Join-Path $native 'lan.dll'
+    $changed = -not (Test-Path $dll)
+    if (-not $changed) {
+        $changed = @(Get-ChildItem -LiteralPath $native -File | Where-Object {
+            $_.Extension -in '.c', '.h' -and $_.LastWriteTimeUtc -gt (Get-Item $dll).LastWriteTimeUtc
+        }).Count -gt 0
+    }
+    if ($changed) { & (Join-Path $native 'build.ps1') }
+    $arguments = @((Join-Path $native 'lan.py'))
+    if ($Offline) { $arguments += '--offline' }
+    & python @arguments
+    if ($LASTEXITCODE -ne 0) { throw 'Native LAN helper exited with an error; see its output.' }
+    return
+}
 
 Add-Type -TypeDefinition @'
 using System;
